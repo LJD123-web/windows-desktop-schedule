@@ -2,10 +2,10 @@
 
 from PySide6.QtWidgets import (
     QWidget, QLabel, QVBoxLayout, QMenu, QHBoxLayout, QFrame,
-    QGraphicsDropShadowEffect
+    QGraphicsDropShadowEffect, QSizePolicy, QScrollArea
 )
-from PySide6.QtCore import Qt, QPoint, QTimer, Signal
-from PySide6.QtGui import QAction, QFont, QColor, QMouseEvent, QPainter, QLinearGradient
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QAction, QColor, QMouseEvent
 
 import storage
 import theme
@@ -89,10 +89,23 @@ class FloatingWindow(QWidget):
         )
         inner.addWidget(sep)
 
-        # 课程列表区域
-        self._courses_layout = QVBoxLayout()
+        # 课程列表区域（可滚动，防止课程过多时窗口太高）
+        self._scroll = QScrollArea()
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QFrame.NoFrame)
+        self._scroll.setStyleSheet("QScrollArea { background: transparent; }"
+                                    "QScrollBar:vertical { width: 4px; background: transparent; }"
+                                    "QScrollBar::handle:vertical { background: rgba(255,158,216,80); border-radius: 2px; }"
+                                    "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }")
+
+        self._courses_container = QWidget()
+        self._courses_container.setStyleSheet("background: transparent;")
+        self._courses_layout = QVBoxLayout(self._courses_container)
         self._courses_layout.setSpacing(6)
-        inner.addLayout(self._courses_layout)
+        self._courses_layout.setContentsMargins(0, 0, 0, 0)
+        self._scroll.setWidget(self._courses_container)
+        self._scroll.setMaximumHeight(320)
+        inner.addWidget(self._scroll)
 
         self._no_course_label = QLabel("今天没有课程 ✨")
         self._no_course_label.setStyleSheet(
@@ -150,25 +163,32 @@ class FloatingWindow(QWidget):
         self.adjustSize()
 
     def _make_course_card(self, course, time_str, is_now):
-        """创建单个课程卡片 - 粉紫玻璃风"""
+        """创建单个课程卡片 - 粉紫玻璃风（两行布局避免文字重叠）"""
         card = QFrame()
         card.setStyleSheet(theme.course_card_style(is_now))
 
-        layout = QHBoxLayout(card)
-        layout.setContentsMargins(12, 8, 12, 8)
-        layout.setSpacing(8)
+        # 外层：左侧高亮条 + 右侧内容
+        outer = QHBoxLayout(card)
+        outer.setContentsMargins(10, 8, 12, 8)
+        outer.setSpacing(8)
 
         # 当前课程左侧发光条
         if is_now:
             bar = QFrame()
-            bar.setFixedWidth(4)
+            bar.setFixedWidth(3)
             bar.setStyleSheet(
-                f"background-color: {theme.PINK_GLOW}; border-radius: 2px;"
+                f"background-color: {theme.PINK_GLOW}; border-radius: 1.5px;"
             )
-            layout.addWidget(bar)
+            outer.addWidget(bar)
 
-        # 课程名
+        # 右侧：上下两行
+        right = QVBoxLayout()
+        right.setContentsMargins(0, 0, 0, 0)
+        right.setSpacing(2)
+
+        # 第一行：课程名
         name_label = QLabel(course.get("name", "未命名"))
+        name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         if is_now:
             name_label.setStyleSheet(
                 f"color: {theme.PINK_GLOW}; font-size: 14px; font-weight: bold;"
@@ -177,25 +197,33 @@ class FloatingWindow(QWidget):
             name_label.setStyleSheet(
                 "color: #ffffff; font-size: 13px; font-weight: bold;"
             )
-        layout.addWidget(name_label)
+        right.addWidget(name_label)
 
-        layout.addStretch()
+        # 第二行：地点 + 时间（同一行，地点在前）
+        second_row = QHBoxLayout()
+        second_row.setContentsMargins(0, 0, 0, 0)
+        second_row.setSpacing(8)
 
-        # 地点
         loc = course.get("location", "")
         if loc:
-            loc_label = QLabel(loc)
+            loc_label = QLabel(f"📍 {loc}")
             loc_label.setStyleSheet(
                 f"color: {theme.LAVENDER}; font-size: 11px;"
             )
-            layout.addWidget(loc_label)
+            loc_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            second_row.addWidget(loc_label)
+        else:
+            second_row.addStretch()
 
-        # 时间
         if time_str:
-            time_label = QLabel(time_str)
-            color = theme.PINK_GLOW if is_now else "rgba(255,158,216,120)"
+            time_label = QLabel(f"🕐 {time_str}")
+            color = theme.PINK_GLOW if is_now else "rgba(255,158,216,150)"
             time_label.setStyleSheet(f"color: {color}; font-size: 11px;")
-            layout.addWidget(time_label)
+            time_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            second_row.addWidget(time_label)
+
+        right.addLayout(second_row)
+        outer.addLayout(right)
 
         return card
 

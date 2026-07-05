@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QPushButton, QHBoxLayout, QHeaderView, QLabel
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QColor, QFont, QBrush
 
 import storage
 import theme
@@ -53,6 +53,12 @@ class WeekScheduleDialog(QDialog):
         table.setAlternatingRowColors(True)
         table.setShowGrid(True)
 
+        # 获取当前星期和节次（用于高亮）
+        from datetime import datetime
+        now = datetime.now()
+        today_col = now.weekday() + 1  # Monday=1
+        current_period = storage.get_current_period()
+
         # 设置节次列
         for row in range(max_period):
             time_str = ""
@@ -62,6 +68,9 @@ class WeekScheduleDialog(QDialog):
             item.setTextAlignment(Qt.AlignCenter)
             item.setFlags(item.flags() & ~Qt.ItemIsEditable)
             bg = QColor(120, 50, 130, 200)
+            # 当前节次行高亮
+            if current_period and row == current_period - 1:
+                bg = QColor(255, 110, 199, 160)
             item.setBackground(bg)
             item.setForeground(QColor(theme.PINK_LIGHT))
             font = item.font()
@@ -82,16 +91,22 @@ class WeekScheduleDialog(QDialog):
             text = c.get("name", "")
             loc = c.get("location", "")
             teacher = c.get("teacher", "")
+            weeks = c.get("weeks", "")
             if loc:
                 text += f"\n@{loc}"
             if teacher:
                 text += f"\n{teacher}"
+            if weeks:
+                text += f"\n({weeks})"
 
             for row in range(sp - 1, ep):
                 item = QTableWidgetItem(text)
                 item.setTextAlignment(Qt.AlignCenter)
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 color = self._course_color(c.get("name", ""))
+                # 当前正在上的课加金色边框感（更亮）
+                if current_period and sp <= current_period <= ep and day_col == today_col:
+                    color = QColor(255, 180, 80, 200)
                 item.setBackground(color)
                 item.setForeground(QColor("#ffffff"))
                 font = QFont()

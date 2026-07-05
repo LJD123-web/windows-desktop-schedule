@@ -7,3 +7,16 @@ venv/
 dist/
 build/
 *.spec
+
+# 测试与调试文件
+test_*.py
+test_*.png
+*_result.txt
+*_output.txt
+ocr_output.txt
+ocr_rapid_output.txt
+debug.log
+preprocess_test/
+after_import_screenshot.png
+real_user_schedule.png
+user_schedule.png

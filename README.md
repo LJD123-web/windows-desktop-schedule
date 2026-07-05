@@ -1,27 +1,24 @@
-# 📅 悬浮窗课程表
+# 悬浮窗课程表
 
-一个 Windows 桌面悬浮窗课程表应用，支持图片 OCR 自动导入。
+一个 Windows 桌面悬浮窗课程表应用，支持图片 OCR 自动导入，粉紫色玻璃风格。
 
-## ✨ 功能特性
+## 功能特性
 
 - **桌面悬浮窗** — 无边框、置顶、半透明，不遮挡其他窗口
 - **今日课程** — 自动显示当天课程，当前节次高亮提示
-- **周课表** — 双击或右键查看完整一周课表，彩色区分课程
-- **图片导入** — 截图课程表，OCR 自动识别并解析（支持 PaddleOCR / Tesseract）
+- **周课表** — 双击或右键查看完整一周课表，当前节次行粉色高亮，正在上的课金色标记
+- **图片 OCR 导入** — 截图课程表，自动识别并解析为结构化课程数据
 - **手动编辑** — 随时添加、修改、删除课程
 - **系统托盘** — 最小化到托盘，点击切换显示
 - **鼠标交互** — 悬停恢复不透明，离开自动半透明，拖拽移动位置
 
-## 🚀 快速开始
+## 快速开始
 
 ### 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
-
-> 如果 PaddleOCR 安装失败，程序仍可正常使用手动编辑功能，只是图片导入不可用。
-> Tesseract 备选方案：安装 [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) 后 `pip install pytesseract`
 
 ### 运行
 
@@ -38,20 +35,54 @@ python main.py
 | 右键菜单 | 刷新 / 添加 / 编辑 / 图片导入 / 退出 |
 | 托盘点击 | 显示/隐藏窗口 |
 
-## 📷 图片导入说明
+## 图片 OCR 导入说明
 
 1. 截图你的课程表（教务系统截图、拍照均可）
-2. 右键 → 「从图片导入」
+2. 右键 -> 「从图片导入」
 3. 选择图片，等待 OCR 识别
 4. 在表格中检查/修正识别结果
 5. 点击「导入课程表」完成
 
-## 📁 数据存储
+### OCR 引擎
+
+按优先级自动检测：
+
+| 引擎 | 说明 |
+|------|------|
+| **RapidOCR** (推荐) | 基于 PaddleOCR 模型 + ONNX 推理，无需安装 paddlepaddle，识别效果最好 |
+| PaddleOCR | 原版 PaddleOCR，功能完整但依赖较重 |
+| EasyOCR | 兼容性好，但对密集中文小字识别效果较差 |
+| Tesseract | 备选，需单独安装 [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) |
+
+### OCR 后处理纠错
+
+OCR 识别结果经过四层纠错提升准确率：
+
+1. **地点纠错** — 修复"1号楼"被误识为"1号带/裁/提/搬"等常见错误
+2. **课程名模糊匹配** — 内置 40+ 常见课程名词典，编辑距离匹配纠正 OCR 错字
+3. **教师名提取** — 从剩余文本中提取教师名，清理前导噪声字
+4. **节次合理性检查** — 结束节次小于开始节次时自动修正
+
+## 数据存储
 
 课程数据保存在 `~/.floating-schedule/schedule.json`，卸载程序不会丢失。
 
-## 🛠 技术栈
+## 技术栈
 
 - **PySide6** — Qt 桌面 UI 框架
-- **PaddleOCR** — 中文 OCR 识别引擎
+- **RapidOCR (ONNX Runtime)** — 中文 OCR 识别引擎
 - **JSON** — 轻量数据存储
+
+## 项目结构
+
+```
+floating-schedule/
+  main.py              # 主入口，创建悬浮窗和系统托盘
+  floating_window.py   # 悬浮窗组件
+  schedule_table.py    # 周课表对话框
+  ocr_import.py        # OCR 图片导入对话框 + 解析逻辑
+  editor_dialog.py     # 手动编辑课程对话框
+  storage.py           # 数据存储层
+  theme.py             # 粉紫色玻璃风格主题
+  requirements.txt     # Python 依赖
+```
