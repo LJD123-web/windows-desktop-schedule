@@ -76,7 +76,7 @@ OCR 识别结果经过四层纠错提升准确率：
 ## 项目结构
 
 ```
-floating-schedule/
+windows-desktop-schedule/
   main.py              # 主入口，创建悬浮窗和系统托盘
   floating_window.py   # 悬浮窗组件
   schedule_table.py    # 周课表对话框

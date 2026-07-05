@@ -1,9 +1,10 @@
 """图片课程表 OCR 识别导入模块 - 粉紫色玻璃风格
 
-支持三种 OCR 引擎（按优先级）：
-1. PaddleOCR（中文识别效果最好）
-2. EasyOCR（兼容性好，PyTorch 后端）
-3. Tesseract（备选，需单独安装）
+支持四种 OCR 引擎（按优先级自动检测）：
+1. RapidOCR（推荐，基于 PaddleOCR 模型 + ONNX 推理，无需 paddlepaddle）
+2. PaddleOCR（中文识别效果好，但依赖较重）
+3. EasyOCR（兼容性好，PyTorch 后端）
+4. Tesseract（备选，需单独安装）
 """
 
 import re
