@@ -1,0 +1,20 @@
+[13896:12472:0705/125640.265:WARNING:data_router_sender.cpp(28)] [DataRouterSender] RegisterReceiver not supported on sender side, route=/sg_tool/./pingback_receiver
+[13896:12472:0705/125640.286:WARNING:t_skinfilemap.cpp(56)] SGRenderLog:CheckUpdate newMem.OpenMem failed, szNewMem:Local\sgime_skin.v5.filemap.sogouime err:系统错误2: 系统找不到指定的文件。  
+打开Filemap失败: Local\sgime_skin.v5.filemap.sogouime4073b6120b7
+[13896:12472:0705/125640.286:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[13896:12472:0705/125640.286:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:5
+[13896:12472:0705/125640.986:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.Dpi144.v5.filemap.sogouime
+[13896:12472:0705/125640.990:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:5
+[13896:12472:0705/125640.990:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:5
+[13896:30816:0705/125641.085:WARNING:kernel_switch.cc(127)] [Engine] GetProductDataInfo failed for: input_cloud_request_rank_1
+[13896:30816:0705/125641.085:WARNING:kernel_switch.cc(127)] [Engine] GetProductDataInfo failed for: input_cloud_request_type_1
+[20240:19188:0705/130212.196:WARNING:data_router_sender.cpp(28)] [DataRouterSender] RegisterReceiver not supported on sender side, route=/sg_tool/./pingback_receiver
+[20240:19188:0705/130212.214:WARNING:t_skinfilemap.cpp(56)] SGRenderLog:CheckUpdate newMem.OpenMem failed, szNewMem:Local\sgime_skin.v5.filemap.sogouime err:系统错误2: 系统找不到指定的文件。  
+打开Filemap失败: Local\sgime_skin.v5.filemap.sogouime4073b6120b7
+[20240:19188:0705/130212.214:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[20240:19188:0705/130212.214:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:5
+[20240:19188:0705/130212.835:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.Dpi144.v5.filemap.sogouime
+[20240:19188:0705/130212.835:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:5
+[20240:19188:0705/130212.835:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:5
+[20240:31992:0705/130212.925:WARNING:kernel_switch.cc(127)] [Engine] GetProductDataInfo failed for: input_cloud_request_rank_1
+[20240:31992:0705/130212.925:WARNING:kernel_switch.cc(127)] [Engine] GetProductDataInfo failed for: input_cloud_request_type_1

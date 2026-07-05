@@ -136,7 +136,6 @@ class OCRImportDialog(QDialog):
         layout.setSpacing(12)
         layout.setContentsMargins(16, 16, 16, 16)
 
-        # 说明
         hint = QLabel(
             "📷 选择课程表截图，自动识别并导入\n"
             "提示：截图越清晰、排版越规整，识别效果越好"
@@ -146,7 +145,6 @@ class OCRImportDialog(QDialog):
         )
         layout.addWidget(hint)
 
-        # 选择图片按钮
         btn_layout = QHBoxLayout()
         self._select_btn = QPushButton("📁  选择图片")
         self._select_btn.setStyleSheet(theme.BTN_PRIMARY)
@@ -162,7 +160,6 @@ class OCRImportDialog(QDialog):
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
-        # 进度条
         self._progress = QProgressBar()
         self._progress.setVisible(False)
         self._progress.setTextVisible(False)
@@ -176,7 +173,6 @@ class OCRImportDialog(QDialog):
         )
         layout.addWidget(self._status_label)
 
-        # 识别结果表格
         result_group = QGroupBox("🔍 识别结果（可直接编辑修正）")
         result_layout = QVBoxLayout(result_group)
 
@@ -189,7 +185,6 @@ class OCRImportDialog(QDialog):
 
         layout.addWidget(result_group)
 
-        # 操作按钮
         op_layout = QHBoxLayout()
         add_row_btn = QPushButton("+ 添加一行")
         add_row_btn.setStyleSheet(theme.BTN_CANCEL)
@@ -206,7 +201,6 @@ class OCRImportDialog(QDialog):
         op_layout.addStretch()
         layout.addLayout(op_layout)
 
-        # 底部
         bottom = QHBoxLayout()
         bottom.addStretch()
 
@@ -230,7 +224,6 @@ class OCRImportDialog(QDialog):
         )
         if not path:
             return
-
         self._image_path = path
         self._path_label.setText(os.path.basename(path))
         self._start_ocr()
@@ -284,99 +277,143 @@ class OCRImportDialog(QDialog):
         QMessageBox.warning(self, "识别失败", msg)
 
     def _parse_courses(self, texts):
+        """解析 OCR 识别结果为课程列表（改进版 v2）
+
+        策略：用节次列的 Y 坐标定义行边界，避免行聚类混乱
+        """
         if not texts:
             return []
 
-        sorted_texts = sorted(texts, key=lambda t: t[1][0][1])
-        rows = []
-        current_row = [sorted_texts[0]]
-        current_y = sorted_texts[0][1][0][1]
-        row_height = 30
-
-        for text, box in sorted_texts[1:]:
-            y = box[0][1]
-            if abs(y - current_y) < row_height:
-                current_row.append((text, box))
-            else:
-                rows.append(current_row)
-                current_row = [(text, box)]
-                current_y = y
-        rows.append(current_row)
-
-        for r in rows:
-            r.sort(key=lambda t: t[1][0][0])
-
-        courses = []
         day_keywords = {
-            "周一": 1, "星期一": 1, "一": 1, "Mon": 1, "MON": 1,
-            "周二": 2, "星期二": 2, "二": 2, "Tue": 2, "TUE": 2,
-            "周三": 3, "星期三": 3, "三": 3, "Wed": 3, "WED": 3,
-            "周四": 4, "星期四": 4, "四": 4, "Thu": 4, "THU": 4,
-            "周五": 5, "星期五": 5, "五": 5, "Fri": 5, "FRI": 5,
-            "周六": 6, "星期六": 6, "六": 6, "Sat": 6, "SAT": 6,
-            "周日": 7, "星期日": 7, "星期天": 7, "日": 7, "Sun": 7, "SUN": 7,
+            "周一": 1, "星期一": 1, "Mon": 1, "MON": 1,
+            "周二": 2, "星期二": 2, "Tue": 2, "TUE": 2,
+            "周三": 3, "星期三": 3, "Wed": 3, "WED": 3,
+            "周四": 4, "星期四": 4, "Thu": 4, "THU": 4,
+            "周五": 5, "星期五": 5, "Fri": 5, "FRI": 5,
+            "周六": 6, "星期六": 6, "Sat": 6, "SAT": 6,
+            "周日": 7, "星期日": 7, "星期天": 7, "Sun": 7, "SUN": 7,
         }
+        period_range_re = re.compile(r'第?\s*(\d{1,2})\s*[-~～]\s*(\d{1,2})\s*节?')
+        period_single_re = re.compile(r'第?\s*(\d{1,2})\s*节')
+        location_keywords = ["教", "楼", "室", "号", "区", "层", "机房", "实验楼", "实验室", "操场", "体育馆", "线上"]
 
-        col_days = {}
-        if rows:
-            header = rows[0]
-            for text, box in header:
-                for kw, day in day_keywords.items():
-                    if kw in text:
-                        col_days[box[0][0]] = day
-                        break
+        all_sorted = sorted(texts, key=lambda t: t[1][0][1])
 
-        period_pattern = re.compile(r'第?\s*(\d+)\s*[-~～]\s*(\d+)\s*节?')
-        single_period = re.compile(r'第?\s*(\d+)\s*节')
+        # ===== 1. 检测表头 + 列区间 =====
+        col_ranges = {}
+        header_y = -999
+        for text, box in all_sorted:
+            for kw, day in day_keywords.items():
+                if kw in text:
+                    x_center = (box[0][0] + box[1][0]) / 2
+                    col_ranges[day] = (x_center - 80, x_center + 80)
+                    header_y = box[0][1]
+                    break
 
-        for row in rows[1:] if col_days else rows:
-            row_x = row[0][1][0][0] if row else 0
-            day = 0
-            for col_x, col_day in sorted(col_days.items()):
-                if row_x >= col_x - 20:
-                    day = col_day
+        # 找节次列 X
+        period_col_x = None
+        for text, box in all_sorted:
+            if "节" in text and len(text) <= 4:
+                period_col_x = (box[0][0] + box[1][0]) / 2
+                break
+        if period_col_x is None:
+            for text, box in all_sorted:
+                if period_range_re.search(text) or period_single_re.search(text):
+                    period_col_x = (box[0][0] + box[1][0]) / 2
+                    break
 
-            full_text = " ".join(t for t, _ in row)
+        if not col_ranges or period_col_x is None:
+            return []
 
+        # ===== 2. 用节次列定义行边界 =====
+        period_markers = []
+        for text, box in all_sorted:
+            x_center = (box[0][0] + box[1][0]) / 2
+            if abs(x_center - period_col_x) > 60:
+                continue
             sp, ep = 0, 0
-            m = period_pattern.search(full_text)
+            m = period_range_re.search(text)
             if m:
                 sp, ep = int(m.group(1)), int(m.group(2))
+                if sp > 20 or ep > 20 or sp > ep:
+                    continue
             else:
-                m = single_period.search(full_text)
+                m = period_single_re.search(text)
                 if m:
                     sp = ep = int(m.group(1))
+                    if sp > 20:
+                        continue
+            if sp:
+                y_center = (box[0][1] + box[2][1]) / 2
+                period_markers.append((sp, ep, y_center))
 
-            name = ""
-            location = ""
-            for text, box in row:
+        if not period_markers:
+            return []
+        period_markers.sort(key=lambda x: x[2])
+
+        # ===== 3. 逐行分配文本 =====
+        courses = []
+        for idx, (sp, ep, row_y) in enumerate(period_markers):
+            if idx + 1 < len(period_markers):
+                y_max = (row_y + period_markers[idx + 1][2]) / 2
+            else:
+                y_max = row_y + 80
+            y_min = row_y - 30
+
+            col_texts = {}
+            for text, box in all_sorted:
+                y_center = (box[0][1] + box[2][1]) / 2
+                if y_center < y_min or y_center > y_max:
+                    continue
+                if abs(y_center - header_y) < 40:
+                    continue
+
+                x_center = (box[0][0] + box[1][0]) / 2
+                if abs(x_center - period_col_x) < 60:
+                    continue
                 if text.strip().isdigit():
                     continue
                 if any(kw in text for kw in day_keywords):
                     continue
-                if period_pattern.search(text) or single_period.search(text):
-                    continue
-                if any(k in text for k in ["教", "楼", "室", "号", "区", "层"]):
-                    location = text.strip()
-                elif not name:
-                    name = text.strip()
 
-            if name or day:
-                if not day:
-                    day = 1
-                if not sp:
-                    sp = 1
-                if not ep:
-                    ep = sp
-                courses.append({
-                    "name": name or "未命名",
-                    "location": location,
-                    "day": day,
-                    "start_period": sp,
-                    "end_period": ep,
-                    "teacher": "",
-                    "weeks": "",
-                })
+                assigned_day = 0
+                for day, (x_min, x_max) in col_ranges.items():
+                    if x_min <= x_center <= x_max:
+                        assigned_day = day
+                        break
+                if assigned_day == 0:
+                    continue
+
+                if assigned_day not in col_texts:
+                    col_texts[assigned_day] = []
+                col_texts[assigned_day].append(text.strip())
+
+            for day, texts_in_col in col_texts.items():
+                name = ""
+                location = ""
+                for text in texts_in_col:
+                    is_location = any(k in text for k in location_keywords)
+                    if not is_location and re.match(r'^[\d]+[-‐－]?[\d]*[号室楼]?$', text.strip()):
+                        is_location = True
+                    if is_location:
+                        if not location:
+                            location = text.strip()
+                    else:
+                        if not name:
+                            name = text.strip()
+                        elif not location:
+                            location = text.strip()
+
+                if name:
+                    courses.append({
+                        "name": name,
+                        "location": location,
+                        "day": day,
+                        "start_period": sp,
+                        "end_period": ep if ep else sp,
+                        "teacher": "",
+                        "weeks": "",
+                    })
 
         return courses
 
