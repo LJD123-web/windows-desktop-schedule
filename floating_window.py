@@ -1,19 +1,21 @@
-"""悬浮窗主界面 - 无边框、置顶、半透明、可拖动"""
+"""悬浮窗主界面 - 粉紫色透明玻璃风格、无边框、置顶、可拖动"""
 
 from PySide6.QtWidgets import (
-    QWidget, QLabel, QVBoxLayout, QMenu, QHBoxLayout, QFrame
+    QWidget, QLabel, QVBoxLayout, QMenu, QHBoxLayout, QFrame,
+    QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import Qt, QPoint, QTimer, Signal
-from PySide6.QtGui import QAction, QFont, QColor, QPalette, QMouseEvent
+from PySide6.QtGui import QAction, QFont, QColor, QMouseEvent, QPainter, QLinearGradient
 
 import storage
+import theme
 from schedule_table import WeekScheduleDialog
 from editor_dialog import EditorDialog
 from ocr_import import OCRImportDialog
 
 
 class FloatingWindow(QWidget):
-    """悬浮窗主组件"""
+    """悬浮窗主组件 - 粉紫玻璃风"""
 
     request_quit = Signal()
 
@@ -41,59 +43,72 @@ class FloatingWindow(QWidget):
             | Qt.Tool
         )
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setFixedWidth(260)
+        self.setFixedWidth(280)
 
-        # 主容器
+        # 主容器 - 粉紫玻璃
         self._container = QFrame(self)
         self._container.setObjectName("container")
-        self._container.setStyleSheet("""
-            QFrame#container {
-                background-color: rgba(45, 45, 55, 240);
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 30);
-            }
-        """)
+        self._container.setStyleSheet(theme.FLOATING_CONTAINER)
+
+        # 外发光阴影效果
+        shadow = QGraphicsDropShadowEffect(self._container)
+        shadow.setBlurRadius(30)
+        shadow.setColor(QColor(200, 80, 192, 120))
+        shadow.setOffset(0, 0)
+        self._container.setGraphicsEffect(shadow)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._container)
 
         inner = QVBoxLayout(self._container)
-        inner.setContentsMargins(16, 12, 16, 12)
-        inner.setSpacing(6)
+        inner.setContentsMargins(18, 14, 18, 14)
+        inner.setSpacing(8)
 
-        # 标题栏
+        # 标题栏 - 渐变文字效果
         header = QHBoxLayout()
-        self._title_label = QLabel("课程表")
+        self._title_label = QLabel("✦ 课程表")
         self._title_label.setStyleSheet(
-            "color: #ffffff; font-size: 14px; font-weight: bold;"
+            f"color: {theme.PINK_LIGHT}; font-size: 15px; font-weight: bold;"
         )
         self._date_label = QLabel("")
-        self._date_label.setStyleSheet("color: rgba(255,255,255,160); font-size: 11px;")
+        self._date_label.setStyleSheet(
+            f"color: rgba(255, 158, 216, 200); font-size: 11px;"
+        )
         self._date_label.setAlignment(Qt.AlignRight)
         header.addWidget(self._title_label)
         header.addStretch()
         header.addWidget(self._date_label)
         inner.addLayout(header)
 
+        # 分隔线
+        sep = QFrame()
+        sep.setFixedHeight(1)
+        sep.setStyleSheet(
+            "background-color: rgba(255, 158, 216, 50); border: none; max-height: 1px;"
+        )
+        inner.addWidget(sep)
+
         # 课程列表区域
         self._courses_layout = QVBoxLayout()
-        self._courses_layout.setSpacing(4)
+        self._courses_layout.setSpacing(6)
         inner.addLayout(self._courses_layout)
 
-        self._no_course_label = QLabel("今天没有课程 🎉")
+        self._no_course_label = QLabel("今天没有课程 ✨")
         self._no_course_label.setStyleSheet(
-            "color: rgba(255,255,255,120); font-size: 12px;"
+            f"color: rgba(255, 158, 216, 150); font-size: 13px;"
         )
         self._no_course_label.setAlignment(Qt.AlignCenter)
-        self._no_course_label.setFixedHeight(40)
+        self._no_course_label.setFixedHeight(48)
         inner.addWidget(self._no_course_label)
 
         inner.addStretch()
 
         # 底部提示
-        hint = QLabel("右键菜单  ·  双击拖动")
-        hint.setStyleSheet("color: rgba(255,255,255,80); font-size: 10px;")
+        hint = QLabel("右键菜单  ·  双击周课表")
+        hint.setStyleSheet(
+            "color: rgba(255, 158, 216, 80); font-size: 10px;"
+        )
         hint.setAlignment(Qt.AlignCenter)
         inner.addWidget(hint)
 
@@ -135,25 +150,33 @@ class FloatingWindow(QWidget):
         self.adjustSize()
 
     def _make_course_card(self, course, time_str, is_now):
-        """创建单个课程卡片"""
+        """创建单个课程卡片 - 粉紫玻璃风"""
         card = QFrame()
-        bg = "rgba(100, 180, 255, 60)" if is_now else "rgba(255,255,255,15)"
-        border = "rgba(100, 180, 255, 180)" if is_now else "rgba(255,255,255,0)"
-        card.setStyleSheet(f"""
-            QFrame {{
-                background-color: {bg};
-                border-radius: 10px;
-                border: 1px solid {border};
-            }}
-        """)
+        card.setStyleSheet(theme.course_card_style(is_now))
 
         layout = QHBoxLayout(card)
-        layout.setContentsMargins(10, 6, 10, 6)
+        layout.setContentsMargins(12, 8, 12, 8)
         layout.setSpacing(8)
+
+        # 当前课程左侧发光条
+        if is_now:
+            bar = QFrame()
+            bar.setFixedWidth(4)
+            bar.setStyleSheet(
+                f"background-color: {theme.PINK_GLOW}; border-radius: 2px;"
+            )
+            layout.addWidget(bar)
 
         # 课程名
         name_label = QLabel(course.get("name", "未命名"))
-        name_label.setStyleSheet("color: #ffffff; font-size: 13px; font-weight: bold;")
+        if is_now:
+            name_label.setStyleSheet(
+                f"color: {theme.PINK_GLOW}; font-size: 14px; font-weight: bold;"
+            )
+        else:
+            name_label.setStyleSheet(
+                "color: #ffffff; font-size: 13px; font-weight: bold;"
+            )
         layout.addWidget(name_label)
 
         layout.addStretch()
@@ -162,20 +185,17 @@ class FloatingWindow(QWidget):
         loc = course.get("location", "")
         if loc:
             loc_label = QLabel(loc)
-            loc_label.setStyleSheet("color: rgba(255,255,255,180); font-size: 11px;")
+            loc_label.setStyleSheet(
+                f"color: {theme.LAVENDER}; font-size: 11px;"
+            )
             layout.addWidget(loc_label)
 
         # 时间
         if time_str:
             time_label = QLabel(time_str)
-            color = "#7ec8ff" if is_now else "rgba(255,255,255,140)"
+            color = theme.PINK_GLOW if is_now else "rgba(255,158,216,120)"
             time_label.setStyleSheet(f"color: {color}; font-size: 11px;")
             layout.addWidget(time_label)
-
-        if is_now:
-            now_tag = QLabel("●")
-            now_tag.setStyleSheet("color: #7ec8ff; font-size: 12px;")
-            layout.addWidget(now_tag)
 
         return card
 
@@ -209,56 +229,41 @@ class FloatingWindow(QWidget):
         self._hover_timer.start(800)
 
     def _fade_out(self):
-        self.setWindowOpacity(0.75)
+        self.setWindowOpacity(0.78)
 
     # ===== 右键菜单 =====
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
-        menu.setStyleSheet("""
-            QMenu {
-                background-color: #2d2d37;
-                color: #ffffff;
-                border: 1px solid #555;
-                border-radius: 8px;
-                padding: 6px;
-            }
-            QMenu::item {
-                padding: 6px 24px;
-                border-radius: 4px;
-            }
-            QMenu::item:selected {
-                background-color: #4a90d9;
-            }
-        """)
+        menu.setStyleSheet(theme.MENU_STYLE)
 
-        act_refresh = QAction("刷新", self)
+        act_refresh = QAction("🔄  刷新", self)
         act_refresh.triggered.connect(self._refresh)
         menu.addAction(act_refresh)
 
         menu.addSeparator()
 
-        act_week = QAction("查看周课表", self)
+        act_week = QAction("📋  查看周课表", self)
         act_week.triggered.connect(self._show_week_table)
         menu.addAction(act_week)
 
-        act_add = QAction("添加课程", self)
+        act_add = QAction("➕  添加课程", self)
         act_add.triggered.connect(self._add_course)
         menu.addAction(act_add)
 
-        act_edit = QAction("编辑课程", self)
+        act_edit = QAction("✏️  编辑课程", self)
         act_edit.triggered.connect(self._edit_courses)
         menu.addAction(act_edit)
 
         menu.addSeparator()
 
-        act_ocr = QAction("从图片导入 📷", self)
+        act_ocr = QAction("📷  从图片导入", self)
         act_ocr.triggered.connect(self._import_from_image)
         menu.addAction(act_ocr)
 
         menu.addSeparator()
 
-        act_quit = QAction("退出", self)
+        act_quit = QAction("❌  退出", self)
         act_quit.triggered.connect(self.request_quit.emit)
         menu.addAction(act_quit)
 

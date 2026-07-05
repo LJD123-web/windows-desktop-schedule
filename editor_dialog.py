@@ -1,34 +1,39 @@
-"""课程编辑对话框 - 手动添加/编辑/删除课程"""
+"""课程编辑对话框 - 粉紫色玻璃风格"""
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QSpinBox, QPushButton, QListWidget, QFormLayout,
-    QGroupBox, QMessageBox, QWidget
+    QGroupBox, QMessageBox
 )
 from PySide6.QtCore import Qt
 
 import storage
+import theme
 
 
 class EditorDialog(QDialog):
-    """课程编辑器"""
+    """课程编辑器 - 粉紫玻璃风"""
 
     def __init__(self, parent=None, edit_mode=False):
         super().__init__(parent)
         self.setWindowTitle("编辑课程表" if edit_mode else "添加课程")
         self.setModal(True)
-        self.resize(520, 580)
+        self.resize(540, 620)
         self._edit_mode = edit_mode
         self._init_ui()
         if edit_mode:
             self._load_courses()
 
     def _init_ui(self):
+        self.setStyleSheet(theme.DIALOG_BASE + theme.INPUT_STYLE + theme.MESSAGEBOX_STYLE)
+
         layout = QVBoxLayout(self)
+        layout.setSpacing(12)
 
         # === 添加/编辑表单 ===
-        form_group = QGroupBox("课程信息")
+        form_group = QGroupBox("🌸 课程信息")
         form_layout = QFormLayout(form_group)
+        form_layout.setSpacing(10)
 
         self._name_input = QLineEdit()
         self._name_input.setPlaceholderText("如：高等数学")
@@ -67,53 +72,23 @@ class EditorDialog(QDialog):
         layout.addWidget(form_group)
 
         # 添加按钮
-        add_btn = QPushButton("添加课程")
-        add_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #4a90d9;
-                color: white;
-                border: none;
-                padding: 8px;
-                border-radius: 6px;
-                font-size: 13px;
-            }
-            QPushButton:hover { background-color: #3a7bc8; }
-        """)
+        add_btn = QPushButton("➕  添加课程")
+        add_btn.setStyleSheet(theme.BTN_PRIMARY)
+        add_btn.setCursor(Qt.PointingHandCursor)
         add_btn.clicked.connect(self._on_add)
         layout.addWidget(add_btn)
 
         # === 课程列表（编辑模式）===
         if self._edit_mode:
-            list_group = QGroupBox("已有课程（选中后可删除）")
+            list_group = QGroupBox("📝 已有课程")
             list_layout = QVBoxLayout(list_group)
             self._course_list = QListWidget()
-            self._course_list.setStyleSheet("""
-                QListWidget {
-                    border: 1px solid #ddd;
-                    border-radius: 6px;
-                    font-size: 12px;
-                }
-                QListWidget::item {
-                    padding: 6px 8px;
-                }
-                QListWidget::item:selected {
-                    background-color: #ff6b6b;
-                    color: white;
-                }
-            """)
+            self._course_list.setStyleSheet(theme.LIST_STYLE)
             list_layout.addWidget(self._course_list)
 
-            del_btn = QPushButton("删除选中课程")
-            del_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #e74c3c;
-                    color: white;
-                    border: none;
-                    padding: 6px;
-                    border-radius: 6px;
-                }
-                QPushButton:hover { background-color: #c0392b; }
-            """)
+            del_btn = QPushButton("🗑  删除选中课程")
+            del_btn.setStyleSheet(theme.BTN_DANGER)
+            del_btn.setCursor(Qt.PointingHandCursor)
             del_btn.clicked.connect(self._on_delete)
             list_layout.addWidget(del_btn)
 
@@ -122,18 +97,9 @@ class EditorDialog(QDialog):
         # 底部
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        ok_btn = QPushButton("完成")
-        ok_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #27ae60;
-                color: white;
-                border: none;
-                padding: 8px 24px;
-                border-radius: 6px;
-                font-size: 13px;
-            }
-            QPushButton:hover { background-color: #229954; }
-        """)
+        ok_btn = QPushButton("✓  完成")
+        ok_btn.setStyleSheet(theme.BTN_SUCCESS)
+        ok_btn.setCursor(Qt.PointingHandCursor)
         ok_btn.clicked.connect(self.accept)
         btn_layout.addWidget(ok_btn)
         layout.addLayout(btn_layout)
@@ -147,7 +113,6 @@ class EditorDialog(QDialog):
                     f"{c.get('name','')} "
                     f"@{c.get('location','')}")
             self._course_list.addItem(text)
-            # 存储 index
             item = self._course_list.item(self._course_list.count() - 1)
             item.setData(Qt.UserRole, i)
 
@@ -169,7 +134,6 @@ class EditorDialog(QDialog):
         storage.add_course(course)
         QMessageBox.information(self, "成功", f"已添加：{name}")
 
-        # 清空输入
         self._name_input.clear()
         self._teacher_input.clear()
         self._location_input.clear()
@@ -197,7 +161,7 @@ class EditorDialog(QDialog):
             self._load_courses()
 
     def get_course(self):
-        """获取输入的课程数据（兼容旧调用）"""
+        """获取输入的课程数据"""
         return {
             "name": self._name_input.text().strip() or "未命名",
             "teacher": self._teacher_input.text().strip(),
